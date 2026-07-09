@@ -40,7 +40,7 @@ uv run playwright install chromium   # the browser Playwright drives
 uv run host.py                       # terminal chat
 ```
 
-Tests — 17 of them, five of which open a real browser against the live site:
+Tests — 27 of them, seven of which open a real browser against the live site:
 
 ```bash
 uv run pytest                # everything
@@ -137,7 +137,7 @@ The extractor therefore reads **specific nodes** and ignores the rest of the doc
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | — | **Required.** [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | See the quota table below |
+| `GEMINI_MODEL` | `gemini-3.1-flash-lite` | See the quota table below |
 | `GEMINI_TEMPERATURE` | `0.2` | Not 0: the model must pick an index from a list whose order shifts |
 | `MAX_TOOL_ROUNDS` | `10` | `open → enter → select → extract` is four rounds; leave room |
 | `WEATHER_HEADLESS` | `false` | `false` lets you watch the browser work, which is the point |
@@ -154,17 +154,31 @@ The extractor therefore reads **specific nodes** and ignores the rest of the doc
 | `⚠️ Gemini error 429 … RequestsPerDay` | **Free-tier daily quota exhausted** for that model | Switch model in `.env` |
 | `Typed 'X' but no suggestions appeared` | The city is not on the site, or a typo | Try another Hebrew city name |
 | `404 … is not found` | The model id no longer exists | Use one from the table below |
+| `CERTIFICATE_VERIFY_FAILED … CA cert does not include key usage extension` | You are behind a TLS-terminating filter, on Python 3.13 | See below |
+
+### Why `.python-version` pins 3.12
+
+Python 3.13 turned on `VERIFY_X509_STRICT` in `ssl.create_default_context()`. Strict
+verification rejects any CA certificate that omits the `keyUsage` extension — and the root
+CA that a TLS-terminating filter such as **Netfree** installs omits exactly that. Every HTTPS
+call then dies before it leaves the machine, Gemini's included.
+
+The fix is not to disable verification. It is to run the interpreter whose defaults the
+filter's certificate satisfies, so [`.python-version`](.python-version) pins `3.12`.
+Certificates are still verified, against the filter's CA, which the system already points at
+through `SSL_CERT_FILE`. `weather_USA.py` has a `VERIFY_SSL` escape hatch for the same
+situation; on 3.12 you do not need it, and it stays off.
 
 Free-tier quota is **per model, per project, per day**. Measured against this key on
 2026-07-10:
 
 | Model | Requests/day (free tier) | Notes |
 | --- | --- | --- |
-| `gemini-2.5-flash` | **20** | Fine for chatting; a chat turn costs 4–6 requests |
-| `gemini-3.1-flash-lite` | 500 | Fast and cheap |
+| `gemini-3.1-flash-lite` | 500 | Fast and cheap. The default; a chat turn costs 4–6 requests |
 | `gemini-3-flash-preview` | higher | Stronger; returns 503 when busy — the host retries |
+| `gemini-2.5-flash` | — | **404.** Google closed it to projects created after ~2026-06 |
 
-All three drive the tools correctly.
+Both surviving models drive the tools correctly.
 
 ---
 

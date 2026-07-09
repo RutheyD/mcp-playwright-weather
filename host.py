@@ -37,7 +37,7 @@ except Exception:  # pragma: no cover
 HERE = Path(__file__).resolve().parent
 load_dotenv(HERE / ".env")
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite").strip()
 TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.2") or 0.2)
 MAX_TOOL_ROUNDS = int(os.getenv("MAX_TOOL_ROUNDS", "10") or 10)
 
